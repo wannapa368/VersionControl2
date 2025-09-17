@@ -1,34 +1,41 @@
-name: Deploy Quasar SPA to GitHub Pages
-
+# deploy.yml
+name: CI/CD Pipeline for Quasar
 on:
   push:
-    branches: [ "master" ] # เปลี่ยนเป็น branch ที่คุณใช้
-
+    branches: [ "master", "main" ]
+  pull_request:
+    branches: [ "master", "main" ]
 jobs:
-  build-and-deploy:
+  build-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write  # Allow pushing to gh-pages
-      
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Cache node_modules
+        uses: actions/cache@v3
         with:
-          node-version: '20' # ใช้ Node.js เวอร์ชัน 18 หรือสูงกว่า
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
-      - name: Install dependencies
-        run: npm install
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
-      - name: Build Quasar SPA
-        run: npx quasar build
+      - name: Install and Build
+        run: |
+          npm install
+          npx quasar build
+
+      - name: Copy index.html to 404.html
+        if: github.ref == 'refs/heads/master'
+        run: cp dist/spa/index.html dist/spa/404.html
 
       - name: Deploy to GitHub Pages
+        if: github.ref == 'refs/heads/master'
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GH_PAT }}  # 🔒 Reference the secret
-          publish_dir: dist/spa
-
-# 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
+          github_token: ${{ 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 }}
+          publish_dir: ./dist/spa
+          publish_branch: gh-pages
